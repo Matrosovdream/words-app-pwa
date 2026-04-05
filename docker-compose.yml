@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    image: words-app:latest
+    container_name: words-app
+    ports:
+      - "3000:8080"
+    restart: unless-stopped

@@ -1,0 +1,17 @@
+{
+  "app": {
+    "name": "words-app"
+  },
+  "web": {
+    "port": 8080,
+    "prefork": false,
+    "static_dir": ""
+  },
+  "log": {
+    "level": 4
+  },
+  "database": {
+    "driver": "sqlite",
+    "path": "./data/words.db"
+  }
+}

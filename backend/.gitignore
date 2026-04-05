@@ -1,0 +1,12 @@
+# Go build artifacts
+tmp/
+*.exe
+*.test
+*.prof
+
+# Runtime data (SQLite, etc.)
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3

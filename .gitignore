@@ -1,0 +1,22 @@
+# Global project-level ignores
+# (backend/ and frontend/ have their own .gitignore files for stack-specific rules)
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

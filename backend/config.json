@@ -12,6 +12,12 @@
   },
   "database": {
     "driver": "sqlite",
-    "path": "./data/words.db"
+    "path": "./data/words.db",
+    "host": "localhost",
+    "port": 5432,
+    "user": "words",
+    "password": "words",
+    "name": "words",
+    "sslmode": "disable"
   }
 }

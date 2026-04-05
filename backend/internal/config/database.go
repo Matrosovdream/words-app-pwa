@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -9,33 +10,56 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 )
 
-// NewDatabase opens a SQLite connection, runs AutoMigrate for all entities,
-// and seeds the `words` table on first startup.
+// NewDatabase opens a database connection based on the configured driver
+// ("sqlite" or "postgres"), runs AutoMigrate for all entities, and seeds
+// the `words` table on first startup.
 //
 // Note: the project rules mandate MySQL + golang-migrate. This demo uses
-// pure-Go SQLite + GORM AutoMigrate so the single-container setup works
-// without external services. The architecture is DB-agnostic — to switch,
-// replace the driver + sqlite.Open() call with mysql.Open(dsn).
+// GORM AutoMigrate so the dev setup can run without an external migration
+// tool. The architecture is DB-agnostic — add more drivers here as needed.
 func NewDatabase(v *viper.Viper, log *logrus.Logger) *gorm.DB {
-	dbPath := v.GetString("database.path")
+	driver := v.GetString("database.driver")
 
-	// Ensure parent directory exists
-	if dir := filepath.Dir(dbPath); dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			log.Fatalf("Failed to create database directory : %+v", err)
-		}
-	}
-
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+	gormConfig := &gorm.Config{
 		Logger: gormlogger.New(
 			log,
 			gormlogger.Config{LogLevel: gormlogger.Warn},
 		),
-	})
+	}
+
+	var (
+		db  *gorm.DB
+		err error
+	)
+
+	switch driver {
+	case "postgres":
+		dsn := fmt.Sprintf(
+			"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+			v.GetString("database.host"),
+			v.GetInt("database.port"),
+			v.GetString("database.user"),
+			v.GetString("database.password"),
+			v.GetString("database.name"),
+			v.GetString("database.sslmode"),
+		)
+		db, err = gorm.Open(postgres.Open(dsn), gormConfig)
+	case "sqlite", "":
+		dbPath := v.GetString("database.path")
+		if dir := filepath.Dir(dbPath); dir != "" && dir != "." {
+			if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+				log.Fatalf("Failed to create database directory : %+v", mkErr)
+			}
+		}
+		db, err = gorm.Open(sqlite.Open(dbPath), gormConfig)
+	default:
+		log.Fatalf("Unsupported database driver : %s", driver)
+	}
 	if err != nil {
 		log.Fatalf("Failed to open database : %+v", err)
 	}

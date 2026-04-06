@@ -19,5 +19,20 @@
     "password": "words",
     "name": "words",
     "sslmode": "disable"
+  },
+  "auth": {
+    "jwt_secret": "change-me-in-production-please-make-this-a-long-random-string",
+    "jwt_ttl_hours": 168,
+    "admin_email": "admin@words.local",
+    "admin_password": "admin"
+  },
+  "parser": {
+    "enabled": true,
+    "poll_interval_seconds": 5,
+    "common_word_threshold": 5000,
+    "default_target_language": "ru"
+  },
+  "frequency_seed": {
+    "path": "./data/frequency_5k.txt"
   }
 }

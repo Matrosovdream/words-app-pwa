@@ -20,6 +20,7 @@ func main() {
 		App:       app,
 		Log:       log,
 		Validate:  validate,
+		Viper:     v,
 		StaticDir: v.GetString("web.static_dir"),
 	})
 

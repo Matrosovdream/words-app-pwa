@@ -1,15 +1,34 @@
 package model
 
-// GetWordRequest is the request DTO for fetching a single word by slug.
-type GetWordRequest struct {
-	Slug string `json:"slug" validate:"required,max=100"`
+type WordTranslationDTO struct {
+	Language    string `json:"language"`
+	Translation string `json:"translation"`
+	Source      string `json:"source"`
+	IsPrimary   bool   `json:"is_primary"`
 }
 
-// WordResponse is the outward shape of a word — never expose entity.Word directly.
-type WordResponse struct {
-	Slug       string `json:"slug"`
-	Word       string `json:"word"`
-	Definition string `json:"definition"`
-	Example    string `json:"example"`
-	Emoji      string `json:"emoji"`
+type WordRelationDTO struct {
+	Type   string `json:"type"`
+	Text   string `json:"text"`
+	Source string `json:"source"`
+}
+
+type WordOccurrenceDTO struct {
+	Sentence  string `json:"sentence"`
+	SourceURL string `json:"source_url,omitempty"`
+	PageTitle string `json:"page_title,omitempty"`
+}
+
+type WordDetailResponse struct {
+	ID            string               `json:"id"`
+	Lemma         string               `json:"lemma"`
+	Language      string               `json:"language"`
+	POS           string               `json:"pos,omitempty"`
+	FrequencyRank *int                 `json:"frequency_rank,omitempty"`
+	IPA           string               `json:"ipa,omitempty"`
+	Definition    string               `json:"definition,omitempty"`
+	Translations  []WordTranslationDTO `json:"translations"`
+	Synonyms      []WordRelationDTO    `json:"synonyms"`
+	Antonyms      []WordRelationDTO    `json:"antonyms"`
+	Occurrences   []WordOccurrenceDTO  `json:"occurrences"`
 }

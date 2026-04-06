@@ -44,6 +44,15 @@ func (r *ParseJobRepository) FindRecent(db *gorm.DB, out *[]entity.ParseJob, lim
 	return db.Order("created_at DESC").Limit(limit).Find(out).Error
 }
 
+// CountActiveBySite returns pending + running job count for a given site.
+func (r *ParseJobRepository) CountActiveBySite(db *gorm.DB, siteID int64) (int64, error) {
+	var n int64
+	err := db.Model(&entity.ParseJob{}).
+		Where("site_id = ? AND status IN ?", siteID, []string{entity.ParseJobStatusPending, entity.ParseJobStatusRunning}).
+		Count(&n).Error
+	return n, err
+}
+
 func (r *ParseJobRepository) CountHitsToday(db *gorm.DB, siteID int64) (int64, error) {
 	since := time.Now().Add(-24 * time.Hour)
 	var n int64

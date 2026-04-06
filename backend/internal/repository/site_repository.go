@@ -19,8 +19,8 @@ func (r *SiteRepository) FindAll(db *gorm.DB, sites *[]entity.Site) error {
 	return db.Order("created_at DESC").Find(sites).Error
 }
 
-func (r *SiteRepository) FindByPublicID(db *gorm.DB, site *entity.Site, publicID string) error {
-	return db.Where("public_id = ?", publicID).First(site).Error
+func (r *SiteRepository) FindByGUID(db *gorm.DB, site *entity.Site, publicID string) error {
+	return db.Where("guid = ?", publicID).First(site).Error
 }
 
 func (r *SiteRepository) FindByID(db *gorm.DB, site *entity.Site, id int64) error {

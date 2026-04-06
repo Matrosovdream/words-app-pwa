@@ -41,6 +41,7 @@ func Bootstrap(c *BootstrapConfig) {
 	reviewRepo := repository.NewReviewItemRepository(c.Log)
 	learnCatRepo := repository.NewLearnCategoryRepository(c.Log)
 	learnItemRepo := repository.NewLearnItemRepository(c.Log)
+	learnItemCatRepo := repository.NewLearnItemCategoryRepository(c.Log)
 	settingRepo := repository.NewAppSettingRepository(c.Log)
 	geoRepo := repository.NewGeoRepository(c.Log)
 
@@ -55,10 +56,10 @@ func Bootstrap(c *BootstrapConfig) {
 		jwtTTL = 168 * time.Hour
 	}
 	authUC := usecase.NewAuthUseCase(c.DB, c.Log, c.Validate, userRepo, jwtSecret, jwtTTL)
-	siteUC := usecase.NewSiteUseCase(c.DB, c.Log, c.Validate, siteRepo, categoryRepo, jobRepo)
+	siteUC := usecase.NewSiteUseCase(c.DB, c.Log, c.Validate, siteRepo, categoryRepo, jobRepo, learnCatRepo)
 	reviewUC := usecase.NewReviewUseCase(c.DB, c.Log, c.Validate,
-		reviewRepo, dictRepo, occRepo, pageRepo, learnItemRepo, learnCatRepo)
-	learnUC := usecase.NewLearnUseCase(c.DB, c.Log, c.Validate, learnCatRepo, learnItemRepo, dictRepo)
+		reviewRepo, dictRepo, occRepo, pageRepo, learnItemRepo, learnCatRepo, learnItemCatRepo, categoryRepo)
+	learnUC := usecase.NewLearnUseCase(c.DB, c.Log, c.Validate, learnCatRepo, learnItemRepo, learnItemCatRepo, dictRepo)
 	wordUC := usecase.NewWordUseCase(c.DB, c.Log, dictRepo, transRepo, relRepo, occRepo, pageRepo, settingRepo, datamuse)
 	settingUC := usecase.NewSettingUseCase(c.DB, c.Log, c.Validate, settingRepo)
 

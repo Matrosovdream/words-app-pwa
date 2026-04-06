@@ -69,6 +69,7 @@ func NewDatabase(v *viper.Viper, log *logrus.Logger) *gorm.DB {
 	if err := db.AutoMigrate(
 		&entity.User{},
 		&entity.Site{},
+		&entity.LearnCategory{},   // must precede SiteCategory (FK)
 		&entity.SiteCategory{},
 		&entity.ParseJob{},
 		&entity.ParsedPage{},
@@ -77,8 +78,8 @@ func NewDatabase(v *viper.Viper, log *logrus.Logger) *gorm.DB {
 		&entity.WordTranslation{},
 		&entity.WordRelation{},
 		&entity.ReviewItem{},
-		&entity.LearnCategory{},
 		&entity.LearnItem{},
+		&entity.LearnItemCategory{}, // join table — after both sides exist
 		&entity.AppSetting{},
 		&entity.Country{},
 		&entity.State{},
@@ -120,7 +121,7 @@ func seedAdminUser(db *gorm.DB, v *viper.Viper, log *logrus.Logger) {
 	}
 
 	user := &entity.User{
-		PublicID:     uuid.NewString(),
+		GUID:     uuid.NewString(),
 		Email:        email,
 		PasswordHash: string(hash),
 		Role:         "admin",
@@ -184,7 +185,7 @@ func seedFrequencyList(db *gorm.DB, v *viper.Viper, log *logrus.Logger) {
 		rank++
 		r := rank
 		batch = append(batch, entity.DictWord{
-			PublicID:      uuid.NewString(),
+			GUID:      uuid.NewString(),
 			Lemma:         lemma,
 			Language:      "en",
 			FrequencyRank: &r,

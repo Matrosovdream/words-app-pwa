@@ -71,7 +71,7 @@ func (c *WordUseCase) Detail(ctx context.Context, publicID string, targetLang st
 	defer tx.Rollback()
 
 	word := new(entity.DictWord)
-	if err := c.DictWordRepository.FindByPublicID(tx, word, publicID); err != nil {
+	if err := c.DictWordRepository.FindByGUID(tx, word, publicID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.ErrNotFound
 		}
@@ -97,7 +97,7 @@ func (c *WordUseCase) Detail(ctx context.Context, publicID string, targetLang st
 				c.Log.Warnf("DeepL translate failed for %s : %+v", word.Lemma, err)
 			} else if text != "" {
 				tr := &entity.WordTranslation{
-					PublicID:       uuid.NewString(),
+					GUID:       uuid.NewString(),
 					WordID:         word.ID,
 					TargetLanguage: targetLang,
 					Translation:    text,
@@ -126,7 +126,7 @@ func (c *WordUseCase) Detail(ctx context.Context, publicID string, targetLang st
 		ants, _ := c.Relations.Antonyms(ctx, word.Lemma)
 		for _, s := range syns {
 			rel := &entity.WordRelation{
-				PublicID:     uuid.NewString(),
+				GUID:     uuid.NewString(),
 				WordID:       word.ID,
 				RelatedText:  s,
 				RelationType: entity.RelationTypeSynonym,
@@ -139,7 +139,7 @@ func (c *WordUseCase) Detail(ctx context.Context, publicID string, targetLang st
 		}
 		for _, a := range ants {
 			rel := &entity.WordRelation{
-				PublicID:     uuid.NewString(),
+				GUID:     uuid.NewString(),
 				WordID:       word.ID,
 				RelatedText:  a,
 				RelationType: entity.RelationTypeAntonym,
@@ -157,7 +157,7 @@ func (c *WordUseCase) Detail(ctx context.Context, publicID string, targetLang st
 	_ = c.OccurrenceRepository.FindByWord(tx, &occs, word.ID, 5)
 
 	resp := &model.WordDetailResponse{
-		ID:            word.PublicID,
+		ID:            word.GUID,
 		Lemma:         word.Lemma,
 		Language:      word.Language,
 		POS:           word.POS,

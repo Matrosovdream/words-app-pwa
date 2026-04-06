@@ -17,15 +17,17 @@ import (
 )
 
 type ReviewUseCase struct {
-	DB                      *gorm.DB
-	Log                     *logrus.Logger
-	Validate                *validator.Validate
-	ReviewRepository        *repository.ReviewItemRepository
-	DictWordRepository      *repository.DictWordRepository
-	OccurrenceRepository    *repository.WordOccurrenceRepository
-	ParsedPageRepository    *repository.ParsedPageRepository
-	LearnItemRepository     *repository.LearnItemRepository
-	LearnCategoryRepository *repository.LearnCategoryRepository
+	DB                          *gorm.DB
+	Log                         *logrus.Logger
+	Validate                    *validator.Validate
+	ReviewRepository            *repository.ReviewItemRepository
+	DictWordRepository          *repository.DictWordRepository
+	OccurrenceRepository        *repository.WordOccurrenceRepository
+	ParsedPageRepository        *repository.ParsedPageRepository
+	LearnItemRepository         *repository.LearnItemRepository
+	LearnCategoryRepository     *repository.LearnCategoryRepository
+	LearnItemCategoryRepository *repository.LearnItemCategoryRepository
+	SiteCategoryRepository      *repository.SiteCategoryRepository
 }
 
 func NewReviewUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate,
@@ -34,17 +36,21 @@ func NewReviewUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Valid
 	occRepo *repository.WordOccurrenceRepository,
 	pageRepo *repository.ParsedPageRepository,
 	learnRepo *repository.LearnItemRepository,
-	catRepo *repository.LearnCategoryRepository) *ReviewUseCase {
+	catRepo *repository.LearnCategoryRepository,
+	itemCatRepo *repository.LearnItemCategoryRepository,
+	siteCatRepo *repository.SiteCategoryRepository) *ReviewUseCase {
 	return &ReviewUseCase{
-		DB:                      db,
-		Log:                     log,
-		Validate:                validate,
-		ReviewRepository:        reviewRepo,
-		DictWordRepository:      dictRepo,
-		OccurrenceRepository:    occRepo,
-		ParsedPageRepository:    pageRepo,
-		LearnItemRepository:     learnRepo,
-		LearnCategoryRepository: catRepo,
+		DB:                          db,
+		Log:                         log,
+		Validate:                    validate,
+		ReviewRepository:            reviewRepo,
+		DictWordRepository:          dictRepo,
+		OccurrenceRepository:        occRepo,
+		ParsedPageRepository:        pageRepo,
+		LearnItemRepository:         learnRepo,
+		LearnCategoryRepository:     catRepo,
+		LearnItemCategoryRepository: itemCatRepo,
+		SiteCategoryRepository:      siteCatRepo,
 	}
 }
 
@@ -79,23 +85,31 @@ func (c *ReviewUseCase) ListPending(ctx context.Context, limit int) ([]model.Rev
 				sourceURL = page.URL
 			}
 		}
-		var firstSeenPagePublicID *string
+		var firstSeenPageGUID *string
 		if r.FirstSeenPageID != nil {
 			page := new(entity.ParsedPage)
 			if err := c.ParsedPageRepository.FindByID(tx, page, *r.FirstSeenPageID); err == nil {
-				firstSeenPagePublicID = &page.PublicID
+				firstSeenPageGUID = &page.GUID
+			}
+		}
+		var siteCategoryName *string
+		if r.SiteCategoryID != nil {
+			sc := new(entity.SiteCategory)
+			if err := c.SiteCategoryRepository.FindByID(tx, sc, *r.SiteCategoryID); err == nil {
+				siteCategoryName = &sc.Name
 			}
 		}
 		responses = append(responses, model.ReviewItemResponse{
-			ID:              r.PublicID,
-			WordID:          word.PublicID,
-			Lemma:           word.Lemma,
-			Language:        word.Language,
-			SampleSentence:  sample,
-			FirstSeenPageID: firstSeenPagePublicID,
-			SourceURL:       sourceURL,
-			Status:          r.Status,
-			CreatedAt:       r.CreatedAt.Unix(),
+			ID:               r.GUID,
+			WordID:           word.GUID,
+			Lemma:            word.Lemma,
+			Language:         word.Language,
+			SampleSentence:   sample,
+			FirstSeenPageID:  firstSeenPageGUID,
+			SourceURL:        sourceURL,
+			SiteCategoryName: siteCategoryName,
+			Status:           r.Status,
+			CreatedAt:        r.CreatedAt.Unix(),
 		})
 	}
 
@@ -116,7 +130,7 @@ func (c *ReviewUseCase) Add(ctx context.Context, req *model.ReviewDecisionReques
 	}
 
 	item := new(entity.ReviewItem)
-	if err := c.ReviewRepository.FindByPublicID(tx, item, req.ID); err != nil {
+	if err := c.ReviewRepository.FindByGUID(tx, item, req.ID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.ErrNotFound
 		}
@@ -124,51 +138,67 @@ func (c *ReviewUseCase) Add(ctx context.Context, req *model.ReviewDecisionReques
 		return fiber.ErrInternalServerError
 	}
 
-	// validate optional category
-	var categoryID *int64
+	// resolve explicit category from request (may be empty)
+	var explicitCatID *int64
 	if req.LearnCategoryID != "" {
 		cat := new(entity.LearnCategory)
-		if err := c.LearnCategoryRepository.FindByPublicID(tx, cat, req.LearnCategoryID); err != nil {
+		if err := c.LearnCategoryRepository.FindByGUID(tx, cat, req.LearnCategoryID); err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fiber.ErrNotFound
 			}
 			c.Log.Warnf("Failed find learn category : %+v", err)
 			return fiber.ErrInternalServerError
 		}
-		categoryID = &cat.ID
+		explicitCatID = &cat.ID
+	}
+
+	// fall back to the site category's learn_category_id when no explicit pick
+	if explicitCatID == nil && item.SiteCategoryID != nil {
+		sc := new(entity.SiteCategory)
+		if err := c.SiteCategoryRepository.FindByID(tx, sc, *item.SiteCategoryID); err == nil && sc.LearnCategoryID != nil {
+			explicitCatID = sc.LearnCategoryID
+		}
 	}
 
 	// upsert learn item
+	var learnItemID int64
 	existing := new(entity.LearnItem)
 	if err := c.LearnItemRepository.FindByWordID(tx, existing, item.WordID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			li := &entity.LearnItem{
-				PublicID:        uuid.NewString(),
-				WordID:          item.WordID,
-				LearnCategoryID: categoryID,
-				Status:          entity.LearnStatusActive,
-				MasteryLevel:    0,
-				CreatedAt:       time.Now(),
-				UpdatedAt:       time.Now(),
+				GUID:         uuid.NewString(),
+				WordID:       item.WordID,
+				Status:       entity.LearnStatusActive,
+				MasteryLevel: 0,
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
 			}
 			if err := c.LearnItemRepository.Create(tx, li); err != nil {
 				c.Log.Warnf("Failed to create learn item : %+v", err)
 				return fiber.ErrInternalServerError
 			}
+			learnItemID = li.ID
 		} else {
 			c.Log.Warnf("Failed find learn item : %+v", err)
 			return fiber.ErrInternalServerError
 		}
 	} else {
-		// reactivate / reassign
+		// reactivate
 		existing.Status = entity.LearnStatusActive
-		existing.LearnCategoryID = categoryID
 		existing.ArchivedAt = nil
 		existing.UpdatedAt = time.Now()
 		if err := c.LearnItemRepository.Update(tx, existing); err != nil {
 			c.Log.Warnf("Failed to update learn item : %+v", err)
 			return fiber.ErrInternalServerError
 		}
+		learnItemID = existing.ID
+	}
+
+	// assign category via join table
+	if explicitCatID != nil {
+		_ = c.LearnItemCategoryRepository.Create(tx, &entity.LearnItemCategory{
+			LearnItemID: learnItemID, LearnCategoryID: *explicitCatID,
+		})
 	}
 
 	now := time.Now()
@@ -192,7 +222,7 @@ func (c *ReviewUseCase) Deny(ctx context.Context, publicID string) error {
 	defer tx.Rollback()
 
 	item := new(entity.ReviewItem)
-	if err := c.ReviewRepository.FindByPublicID(tx, item, publicID); err != nil {
+	if err := c.ReviewRepository.FindByGUID(tx, item, publicID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.ErrNotFound
 		}

@@ -5,7 +5,7 @@ import "time"
 // LearnCategory is a user-defined folder under /learn.
 type LearnCategory struct {
 	ID        int64     `gorm:"column:id;primaryKey;autoIncrement"`
-	PublicID  string    `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
+	GUID  string    `gorm:"column:guid;type:uuid;uniqueIndex;not null"`
 	Name      string    `gorm:"column:name;size:128"`
 	Color     string    `gorm:"column:color;size:16"`
 	SortOrder int       `gorm:"column:sort_order;default:0"`

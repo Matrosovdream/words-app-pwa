@@ -15,8 +15,8 @@ func NewDictWordRepository(log *logrus.Logger) *DictWordRepository {
 	return &DictWordRepository{Log: log}
 }
 
-func (r *DictWordRepository) FindByPublicID(db *gorm.DB, out *entity.DictWord, publicID string) error {
-	return db.Where("public_id = ?", publicID).First(out).Error
+func (r *DictWordRepository) FindByGUID(db *gorm.DB, out *entity.DictWord, publicID string) error {
+	return db.Where("guid = ?", publicID).First(out).Error
 }
 
 func (r *DictWordRepository) FindByID(db *gorm.DB, out *entity.DictWord, id int64) error {

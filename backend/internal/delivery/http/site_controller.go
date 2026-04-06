@@ -113,6 +113,14 @@ func (c *SiteController) CrawlCategory(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(model.WebResponse[string]{Data: "queued"})
 }
 
+func (c *SiteController) RunSite(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	if err := c.UseCase.RunSite(ctx.UserContext(), id); err != nil {
+		return err
+	}
+	return ctx.Status(fiber.StatusCreated).JSON(model.WebResponse[string]{Data: "queued"})
+}
+
 func (c *SiteController) EnqueueURL(ctx *fiber.Ctx) error {
 	request := new(model.EnqueueURLRequest)
 	if err := ctx.BodyParser(request); err != nil {

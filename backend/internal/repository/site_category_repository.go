@@ -19,8 +19,8 @@ func (r *SiteCategoryRepository) FindBySite(db *gorm.DB, out *[]entity.SiteCateg
 	return db.Where("site_id = ?", siteID).Order("name ASC").Find(out).Error
 }
 
-func (r *SiteCategoryRepository) FindByPublicID(db *gorm.DB, out *entity.SiteCategory, publicID string) error {
-	return db.Where("public_id = ?", publicID).First(out).Error
+func (r *SiteCategoryRepository) FindByGUID(db *gorm.DB, out *entity.SiteCategory, publicID string) error {
+	return db.Where("guid = ?", publicID).First(out).Error
 }
 
 func (r *SiteCategoryRepository) FindByID(db *gorm.DB, out *entity.SiteCategory, id int64) error {

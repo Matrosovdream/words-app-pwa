@@ -51,6 +51,7 @@ onMounted(load)
         <div class="top">
           <h3>{{ item.lemma }}</h3>
           <span class="lang">{{ item.language }}</span>
+          <span v-if="item.site_category_name" class="source-cat">{{ item.site_category_name }}</span>
         </div>
         <p v-if="item.sample_sentence" class="sample">"{{ item.sample_sentence }}"</p>
         <p v-if="item.source_url" class="source">
@@ -84,6 +85,7 @@ onMounted(load)
 .top { display: flex; align-items: baseline; gap: 0.75rem; }
 .top h3 { margin: 0; font-size: 1.4rem; color: #f1f5f9; }
 .lang { font-size: 0.75rem; color: #64748b; text-transform: uppercase; }
+.source-cat { font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
 .sample { margin: 0.5rem 0 0.25rem; color: #cbd5e1; font-style: italic; }
 .source { margin: 0.25rem 0 0; font-size: 0.8rem; }
 .source a { color: #38bdf8; }

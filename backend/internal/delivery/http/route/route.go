@@ -42,6 +42,7 @@ func (c *RouteConfig) Setup() {
 	auth.Put("/admin/sites/:id/categories/:categoryId", c.SiteController.UpdateCategory)
 	auth.Delete("/admin/sites/:id/categories/:categoryId", c.SiteController.DeleteCategory)
 	auth.Post("/admin/sites/:id/categories/:categoryId/crawl", c.SiteController.CrawlCategory)
+	auth.Post("/admin/sites/:id/run", c.SiteController.RunSite)
 	auth.Post("/admin/sites/:id/enqueue", c.SiteController.EnqueueURL)
 
 	// Admin: settings

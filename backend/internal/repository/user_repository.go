@@ -19,6 +19,6 @@ func (r *UserRepository) FindByEmail(db *gorm.DB, user *entity.User, email strin
 	return db.Where("email = ?", email).First(user).Error
 }
 
-func (r *UserRepository) FindByPublicID(db *gorm.DB, user *entity.User, publicID string) error {
-	return db.Where("public_id = ?", publicID).First(user).Error
+func (r *UserRepository) FindByGUID(db *gorm.DB, user *entity.User, publicID string) error {
+	return db.Where("guid = ?", publicID).First(user).Error
 }

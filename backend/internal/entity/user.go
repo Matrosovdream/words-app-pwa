@@ -5,7 +5,7 @@ import "time"
 // User represents an admin user (single-user system for now).
 type User struct {
 	ID           int64     `gorm:"column:id;primaryKey;autoIncrement"`
-	PublicID     string    `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
+	GUID     string    `gorm:"column:guid;type:uuid;uniqueIndex;not null"`
 	Email        string    `gorm:"column:email;uniqueIndex;size:255"`
 	PasswordHash string    `gorm:"column:password_hash;size:255"`
 	Role         string    `gorm:"column:role;size:32;default:admin"`

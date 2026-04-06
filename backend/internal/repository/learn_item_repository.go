@@ -15,8 +15,8 @@ func NewLearnItemRepository(log *logrus.Logger) *LearnItemRepository {
 	return &LearnItemRepository{Log: log}
 }
 
-func (r *LearnItemRepository) FindByPublicID(db *gorm.DB, out *entity.LearnItem, publicID string) error {
-	return db.Where("public_id = ?", publicID).First(out).Error
+func (r *LearnItemRepository) FindByGUID(db *gorm.DB, out *entity.LearnItem, publicID string) error {
+	return db.Where("guid = ?", publicID).First(out).Error
 }
 
 func (r *LearnItemRepository) FindByWordID(db *gorm.DB, out *entity.LearnItem, wordID int64) error {
@@ -24,17 +24,18 @@ func (r *LearnItemRepository) FindByWordID(db *gorm.DB, out *entity.LearnItem, w
 }
 
 func (r *LearnItemRepository) FindActive(db *gorm.DB, out *[]entity.LearnItem, categoryID *int64, sort string) error {
-	q := db.Where("status = ?", entity.LearnStatusActive)
+	q := db.Where("learn_items.status = ?", entity.LearnStatusActive)
 	if categoryID != nil {
-		q = q.Where("learn_category_id = ?", *categoryID)
+		q = q.Joins("JOIN learn_item_categories lic ON lic.learn_item_id = learn_items.id").
+			Where("lic.learn_category_id = ?", *categoryID)
 	}
 	switch sort {
 	case "oldest":
-		q = q.Order("created_at ASC")
+		q = q.Order("learn_items.created_at ASC")
 	case "mastery":
-		q = q.Order("mastery_level DESC, created_at DESC")
+		q = q.Order("learn_items.mastery_level DESC, learn_items.created_at DESC")
 	default:
-		q = q.Order("created_at DESC")
+		q = q.Order("learn_items.created_at DESC")
 	}
 	return q.Find(out).Error
 }

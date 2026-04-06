@@ -11,7 +11,7 @@ const (
 // For simplicity we store the related word as free text (it may not yet be in the dict).
 type WordRelation struct {
 	ID           int64     `gorm:"column:id;primaryKey;autoIncrement"`
-	PublicID     string    `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
+	GUID     string    `gorm:"column:guid;type:uuid;uniqueIndex;not null"`
 	WordID       int64     `gorm:"column:word_id;index:idx_word_rel,priority:1,unique"`
 	RelatedText  string    `gorm:"column:related_text;size:128;index:idx_word_rel,priority:2"`
 	RelationType string    `gorm:"column:relation_type;size:16;index:idx_word_rel,priority:3"`

@@ -36,37 +36,40 @@ type UpdateSiteRequest struct {
 }
 
 type SiteCategoryResponse struct {
-	ID             string `json:"id"`
-	SiteID         string `json:"site_id"`
-	Name           string `json:"name"`
-	StartURL       string `json:"start_url"`
-	URLPattern     string `json:"url_pattern"`
-	SelectorTitle  string `json:"selector_title"`
-	SelectorBody   string `json:"selector_body"`
-	SourceLanguage string `json:"source_language"`
-	IsActive       bool   `json:"is_active"`
+	ID              string  `json:"id"`
+	SiteID          string  `json:"site_id"`
+	Name            string  `json:"name"`
+	StartURL        string  `json:"start_url"`
+	URLPattern      string  `json:"url_pattern"`
+	SelectorTitle   string  `json:"selector_title"`
+	SelectorBody    string  `json:"selector_body"`
+	SourceLanguage  string  `json:"source_language"`
+	IsActive        bool    `json:"is_active"`
+	LearnCategoryID *string `json:"learn_category_id,omitempty"`
 }
 
 type CreateSiteCategoryRequest struct {
-	SiteID         string `json:"-" validate:"required,uuid"`
-	Name           string `json:"name" validate:"required,max=255"`
-	StartURL       string `json:"start_url" validate:"required,url,max=512"`
-	URLPattern     string `json:"url_pattern" validate:"max=512"`
-	SelectorTitle  string `json:"selector_title" validate:"max=255"`
-	SelectorBody   string `json:"selector_body" validate:"required,max=255"`
-	SourceLanguage string `json:"source_language" validate:"max=8"`
-	IsActive       *bool  `json:"is_active"`
+	SiteID          string  `json:"-" validate:"required,uuid"`
+	Name            string  `json:"name" validate:"required,max=255"`
+	StartURL        string  `json:"start_url" validate:"required,url,max=512"`
+	URLPattern      string  `json:"url_pattern" validate:"max=512"`
+	SelectorTitle   string  `json:"selector_title" validate:"max=255"`
+	SelectorBody    string  `json:"selector_body" validate:"required,max=255"`
+	SourceLanguage  string  `json:"source_language" validate:"max=8"`
+	IsActive        *bool   `json:"is_active"`
+	LearnCategoryID *string `json:"learn_category_id" validate:"omitempty,uuid"`
 }
 
 type UpdateSiteCategoryRequest struct {
-	ID             string `json:"-" validate:"required,uuid"`
-	Name           string `json:"name" validate:"required,max=255"`
-	StartURL       string `json:"start_url" validate:"required,url,max=512"`
-	URLPattern     string `json:"url_pattern" validate:"max=512"`
-	SelectorTitle  string `json:"selector_title" validate:"max=255"`
-	SelectorBody   string `json:"selector_body" validate:"required,max=255"`
-	SourceLanguage string `json:"source_language" validate:"max=8"`
-	IsActive       *bool  `json:"is_active"`
+	ID              string  `json:"-" validate:"required,uuid"`
+	Name            string  `json:"name" validate:"required,max=255"`
+	StartURL        string  `json:"start_url" validate:"required,url,max=512"`
+	URLPattern      string  `json:"url_pattern" validate:"max=512"`
+	SelectorTitle   string  `json:"selector_title" validate:"max=255"`
+	SelectorBody    string  `json:"selector_body" validate:"required,max=255"`
+	SourceLanguage  string  `json:"source_language" validate:"max=8"`
+	IsActive        *bool   `json:"is_active"`
+	LearnCategoryID *string `json:"learn_category_id" validate:"omitempty,uuid"`
 }
 
 type EnqueueURLRequest struct {

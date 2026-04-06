@@ -5,7 +5,7 @@ import "time"
 // ParsedPage is the history record for a URL that was already processed.
 type ParsedPage struct {
 	ID             int64   `gorm:"column:id;primaryKey;autoIncrement"`
-	PublicID       string  `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
+	GUID       string  `gorm:"column:guid;type:uuid;uniqueIndex;not null"`
 	SiteID         int64   `gorm:"column:site_id;index:idx_site_url,priority:1"`
 	SiteCategoryID *int64  `gorm:"column:site_category_id"`
 	URL            string  `gorm:"column:url;size:1024"`

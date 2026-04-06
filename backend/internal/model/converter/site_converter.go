@@ -7,7 +7,7 @@ import (
 
 func SiteToResponse(s *entity.Site) *model.SiteResponse {
 	return &model.SiteResponse{
-		ID:               s.PublicID,
+		ID:               s.GUID,
 		Name:             s.Name,
 		BaseURL:          s.BaseURL,
 		IsActive:         s.IsActive,
@@ -27,10 +27,10 @@ func SitesToResponses(items []entity.Site) []model.SiteResponse {
 	return out
 }
 
-func SiteCategoryToResponse(c *entity.SiteCategory, sitePublicID string) *model.SiteCategoryResponse {
-	return &model.SiteCategoryResponse{
-		ID:             c.PublicID,
-		SiteID:         sitePublicID,
+func SiteCategoryToResponse(c *entity.SiteCategory, siteGUID string, learnCatGUIDs map[int64]string) *model.SiteCategoryResponse {
+	resp := &model.SiteCategoryResponse{
+		ID:             c.GUID,
+		SiteID:         siteGUID,
 		Name:           c.Name,
 		StartURL:       c.StartURL,
 		URLPattern:     c.URLPattern,
@@ -39,12 +39,18 @@ func SiteCategoryToResponse(c *entity.SiteCategory, sitePublicID string) *model.
 		SourceLanguage: c.SourceLanguage,
 		IsActive:       c.IsActive,
 	}
+	if c.LearnCategoryID != nil {
+		if g, ok := learnCatGUIDs[*c.LearnCategoryID]; ok {
+			resp.LearnCategoryID = &g
+		}
+	}
+	return resp
 }
 
-func SiteCategoriesToResponses(items []entity.SiteCategory, sitePublicID string) []model.SiteCategoryResponse {
+func SiteCategoriesToResponses(items []entity.SiteCategory, siteGUID string, learnCatGUIDs map[int64]string) []model.SiteCategoryResponse {
 	out := make([]model.SiteCategoryResponse, len(items))
 	for i := range items {
-		out[i] = *SiteCategoryToResponse(&items[i], sitePublicID)
+		out[i] = *SiteCategoryToResponse(&items[i], siteGUID, learnCatGUIDs)
 	}
 	return out
 }

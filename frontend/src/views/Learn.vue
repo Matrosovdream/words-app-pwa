@@ -106,7 +106,11 @@ onMounted(async () => { await loadCategories(); await loadItems() })
         <RouterLink :to="`/words/${item.word_id}`" class="link">
           <div class="word">
             <h3>{{ item.lemma }}</h3>
-            <span v-if="item.category_name" class="tag">{{ item.category_name }}</span>
+            <span
+              v-for="cat in item.categories" :key="cat.id"
+              class="tag"
+              :style="cat.color ? `background: ${cat.color}22; color: ${cat.color}` : ''"
+            >{{ cat.name }}</span>
           </div>
           <span class="mastery">★ {{ item.mastery_level }}/5</span>
         </RouterLink>

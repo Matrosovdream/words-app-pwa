@@ -20,8 +20,8 @@ func (r *ReviewItemRepository) FindPending(db *gorm.DB, out *[]entity.ReviewItem
 		Order("created_at DESC").Limit(limit).Find(out).Error
 }
 
-func (r *ReviewItemRepository) FindByPublicID(db *gorm.DB, out *entity.ReviewItem, publicID string) error {
-	return db.Where("public_id = ?", publicID).First(out).Error
+func (r *ReviewItemRepository) FindByGUID(db *gorm.DB, out *entity.ReviewItem, publicID string) error {
+	return db.Where("guid = ?", publicID).First(out).Error
 }
 
 func (r *ReviewItemRepository) FindByWordID(db *gorm.DB, out *entity.ReviewItem, wordID int64) error {

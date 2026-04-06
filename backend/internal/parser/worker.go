@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -186,7 +188,7 @@ func (w *Worker) processJob(ctx context.Context, job *entity.ParseJob) {
 		page.ParsedAt = now
 	} else {
 		page = &entity.ParsedPage{
-			PublicID:       uuid.NewString(),
+			GUID:       uuid.NewString(),
 			SiteID:         site.ID,
 			SiteCategoryID: job.SiteCategoryID,
 			URL:            job.URL,
@@ -215,7 +217,12 @@ func (w *Worker) processJob(ctx context.Context, job *entity.ParseJob) {
 	}
 
 	// extract unique rare words + create review items
-	w.extractRareWords(ctx, page, tokens, sentences, cat)
+	w.extractRareWords(ctx, page, tokens, sentences, cat, job.SiteCategoryID)
+
+	// depth-1: extract links and enqueue if depth < 1
+	if job.Depth < 1 && cat != nil {
+		w.enqueueLinkedPages(ctx, html, job, site, cat)
+	}
 
 	// mark done
 	t := time.Now()
@@ -225,7 +232,7 @@ func (w *Worker) processJob(ctx context.Context, job *entity.ParseJob) {
 	_ = w.JobRepository.Update(w.DB.WithContext(ctx), job)
 }
 
-func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, tokens, sentences []string, cat *entity.SiteCategory) {
+func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, tokens, sentences []string, cat *entity.SiteCategory, siteCategoryID *int64) {
 	counts := make(map[string]int)
 	for _, t := range tokens {
 		counts[t]++
@@ -256,7 +263,7 @@ func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, 
 		} else {
 			// create new dict word (rare, not in frequency seed)
 			existing = &entity.DictWord{
-				PublicID:  uuid.NewString(),
+				GUID:  uuid.NewString(),
 				Lemma:    lemma,
 				Language: language,
 			}
@@ -268,7 +275,7 @@ func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, 
 		// create occurrence (one per page per word)
 		sample := FindSampleSentence(sentences, lemma)
 		_ = w.OccurrenceRepository.Create(w.DB.WithContext(ctx), &entity.WordOccurrence{
-			PublicID:       uuid.NewString(),
+			GUID:       uuid.NewString(),
 			WordID:         existing.ID,
 			ParsedPageID:   page.ID,
 			Count:          count,
@@ -282,9 +289,10 @@ func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, 
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				pageID := page.ID
 				_ = w.ReviewRepository.Create(w.DB.WithContext(ctx), &entity.ReviewItem{
-					PublicID:        uuid.NewString(),
+					GUID:            uuid.NewString(),
 					WordID:          existing.ID,
 					FirstSeenPageID: &pageID,
+					SiteCategoryID:  siteCategoryID,
 					Status:          entity.ReviewStatusPending,
 					CreatedAt:       time.Now(),
 					UpdatedAt:       time.Now(),
@@ -292,6 +300,77 @@ func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, 
 			}
 		}
 	}
+}
+
+// enqueueLinkedPages extracts all <a href> links from the page HTML, filters them
+// by the category's URLPattern and the site's base domain, and enqueues each as
+// a new ParseJob at depth+1. Already-seen URLs are skipped via the parsed_pages
+// content hash lookup.
+func (w *Worker) enqueueLinkedPages(ctx context.Context, html string, job *entity.ParseJob, site *entity.Site, cat *entity.SiteCategory) {
+	base, err := url.Parse(job.URL)
+	if err != nil {
+		return
+	}
+	var pattern *regexp.Regexp
+	if cat.URLPattern != "" {
+		pattern, _ = regexp.Compile(cat.URLPattern)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
+	if err != nil {
+		return
+	}
+
+	seen := map[string]bool{}
+	doc.Find("a[href]").Each(func(_ int, s *goquery.Selection) {
+		href, _ := s.Attr("href")
+		ref, err := url.Parse(strings.TrimSpace(href))
+		if err != nil || ref.Scheme == "mailto" || ref.Scheme == "javascript" {
+			return
+		}
+		abs := base.ResolveReference(ref)
+		abs.Fragment = ""
+		abs.RawQuery = ""
+		link := abs.String()
+
+		// must be same host
+		if abs.Host != base.Host {
+			return
+		}
+		// must match url_pattern if set
+		if pattern != nil && !pattern.MatchString(link) {
+			return
+		}
+		if seen[link] {
+			return
+		}
+		seen[link] = true
+
+		// skip if already parsed
+		urlHash := hashString(link)
+		existing := new(entity.ParsedPage)
+		if w.PageRepository.FindByHash(w.DB.WithContext(ctx), existing, site.ID, urlHash) == nil {
+			if !site.ReparseEnabled {
+				return
+			}
+		}
+
+		catID := cat.ID
+		newJob := &entity.ParseJob{
+			GUID:           uuid.NewString(),
+			SiteID:         site.ID,
+			SiteCategoryID: &catID,
+			URL:            link,
+			Depth:          job.Depth + 1,
+			Status:         entity.ParseJobStatusPending,
+			ScheduledAt:    time.Now(),
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
+		}
+		if err := w.JobRepository.Create(w.DB.WithContext(ctx), newJob); err != nil {
+			w.Log.Warnf("Failed to enqueue linked page %s : %+v", link, err)
+		}
+	})
 }
 
 func (w *Worker) failJob(ctx context.Context, job *entity.ParseJob, msg string) {

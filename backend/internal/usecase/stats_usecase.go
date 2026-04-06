@@ -75,7 +75,7 @@ func (c *StatsUseCase) ParserStats(ctx context.Context) (*model.ParserStatsRespo
 	recentDTOs := make([]model.RecentJobDTO, 0, len(recent))
 	for _, j := range recent {
 		dto := model.RecentJobDTO{
-			ID:          j.PublicID,
+			ID:          j.GUID,
 			SiteName:    siteNames[j.SiteID],
 			URL:         j.URL,
 			Status:      j.Status,
@@ -98,7 +98,7 @@ func (c *StatsUseCase) ParserStats(ctx context.Context) (*model.ParserStatsRespo
 	for _, s := range sites {
 		n, _ := c.JobRepository.CountHitsToday(db, s.ID)
 		siteHits = append(siteHits, model.SiteHitDTO{
-			ID:            s.PublicID,
+			ID:            s.GUID,
 			Name:          s.Name,
 			IsActive:      s.IsActive,
 			HitsToday:     n,

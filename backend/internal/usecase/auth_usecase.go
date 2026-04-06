@@ -64,7 +64,7 @@ func (c *AuthUseCase) Login(ctx context.Context, req *model.LoginRequest) (*mode
 
 	expiresAt := time.Now().Add(c.JWTTTL)
 	claims := jwt.MapClaims{
-		"sub":   user.ID,
+		"sub":   user.PublicID,
 		"email": user.Email,
 		"role":  user.Role,
 		"exp":   expiresAt.Unix(),
@@ -86,21 +86,21 @@ func (c *AuthUseCase) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		Token:     signed,
 		ExpiresAt: expiresAt.Unix(),
 		User: model.UserResponse{
-			ID:    user.ID,
+			ID:    user.PublicID,
 			Email: user.Email,
 			Role:  user.Role,
 		},
 	}, nil
 }
 
-func (c *AuthUseCase) Me(ctx context.Context, userID string) (*model.UserResponse, error) {
+func (c *AuthUseCase) Me(ctx context.Context, userPublicID string) (*model.UserResponse, error) {
 	user := new(entity.User)
-	if err := c.UserRepository.FindByID(c.DB.WithContext(ctx), user, userID); err != nil {
+	if err := c.UserRepository.FindByPublicID(c.DB.WithContext(ctx), user, userPublicID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.ErrUnauthorized
 		}
 		c.Log.Warnf("Failed to fetch user : %+v", err)
 		return nil, fiber.ErrInternalServerError
 	}
-	return &model.UserResponse{ID: user.ID, Email: user.Email, Role: user.Role}, nil
+	return &model.UserResponse{ID: user.PublicID, Email: user.Email, Role: user.Role}, nil
 }

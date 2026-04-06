@@ -15,15 +15,15 @@ func NewLearnItemRepository(log *logrus.Logger) *LearnItemRepository {
 	return &LearnItemRepository{Log: log}
 }
 
-func (r *LearnItemRepository) FindByID(db *gorm.DB, out *entity.LearnItem, id string) error {
-	return db.Where("id = ?", id).First(out).Error
+func (r *LearnItemRepository) FindByPublicID(db *gorm.DB, out *entity.LearnItem, publicID string) error {
+	return db.Where("public_id = ?", publicID).First(out).Error
 }
 
-func (r *LearnItemRepository) FindByWordID(db *gorm.DB, out *entity.LearnItem, wordID string) error {
+func (r *LearnItemRepository) FindByWordID(db *gorm.DB, out *entity.LearnItem, wordID int64) error {
 	return db.Where("word_id = ?", wordID).First(out).Error
 }
 
-func (r *LearnItemRepository) FindActive(db *gorm.DB, out *[]entity.LearnItem, categoryID *string, sort string) error {
+func (r *LearnItemRepository) FindActive(db *gorm.DB, out *[]entity.LearnItem, categoryID *int64, sort string) error {
 	q := db.Where("status = ?", entity.LearnStatusActive)
 	if categoryID != nil {
 		q = q.Where("learn_category_id = ?", *categoryID)
@@ -52,6 +52,6 @@ func (r *LearnItemRepository) Update(db *gorm.DB, item *entity.LearnItem) error 
 	return db.Save(item).Error
 }
 
-func (r *LearnItemRepository) Delete(db *gorm.DB, id string) error {
+func (r *LearnItemRepository) Delete(db *gorm.DB, id int64) error {
 	return db.Where("id = ?", id).Delete(&entity.LearnItem{}).Error
 }

@@ -27,7 +27,6 @@ type WordUseCase struct {
 	PageRepository        *repository.ParsedPageRepository
 	SettingRepository     *repository.AppSettingRepository
 	Relations             dictionary.RelationsClient
-	Log2                  *logrus.Logger
 }
 
 func NewWordUseCase(db *gorm.DB, log *logrus.Logger,
@@ -67,12 +66,12 @@ func (c *WordUseCase) getDeepL(tx *gorm.DB) *translation.DeepLClient {
 
 // Detail returns a fully-populated word view, lazy-fetching translations and
 // synonyms/antonyms on first access and caching them in the DB.
-func (c *WordUseCase) Detail(ctx context.Context, id string, targetLang string) (*model.WordDetailResponse, error) {
+func (c *WordUseCase) Detail(ctx context.Context, publicID string, targetLang string) (*model.WordDetailResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
 	word := new(entity.DictWord)
-	if err := c.DictWordRepository.FindByID(tx, word, id); err != nil {
+	if err := c.DictWordRepository.FindByPublicID(tx, word, publicID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.ErrNotFound
 		}
@@ -98,7 +97,7 @@ func (c *WordUseCase) Detail(ctx context.Context, id string, targetLang string) 
 				c.Log.Warnf("DeepL translate failed for %s : %+v", word.Lemma, err)
 			} else if text != "" {
 				tr := &entity.WordTranslation{
-					ID:             uuid.NewString(),
+					PublicID:       uuid.NewString(),
 					WordID:         word.ID,
 					TargetLanguage: targetLang,
 					Translation:    text,
@@ -127,7 +126,7 @@ func (c *WordUseCase) Detail(ctx context.Context, id string, targetLang string) 
 		ants, _ := c.Relations.Antonyms(ctx, word.Lemma)
 		for _, s := range syns {
 			rel := &entity.WordRelation{
-				ID:           uuid.NewString(),
+				PublicID:     uuid.NewString(),
 				WordID:       word.ID,
 				RelatedText:  s,
 				RelationType: entity.RelationTypeSynonym,
@@ -140,7 +139,7 @@ func (c *WordUseCase) Detail(ctx context.Context, id string, targetLang string) 
 		}
 		for _, a := range ants {
 			rel := &entity.WordRelation{
-				ID:           uuid.NewString(),
+				PublicID:     uuid.NewString(),
 				WordID:       word.ID,
 				RelatedText:  a,
 				RelationType: entity.RelationTypeAntonym,
@@ -158,7 +157,7 @@ func (c *WordUseCase) Detail(ctx context.Context, id string, targetLang string) 
 	_ = c.OccurrenceRepository.FindByWord(tx, &occs, word.ID, 5)
 
 	resp := &model.WordDetailResponse{
-		ID:            word.ID,
+		ID:            word.PublicID,
 		Lemma:         word.Lemma,
 		Language:      word.Language,
 		POS:           word.POS,
@@ -189,7 +188,7 @@ func (c *WordUseCase) Detail(ctx context.Context, id string, targetLang string) 
 	for _, o := range occs {
 		dto := model.WordOccurrenceDTO{Sentence: o.SampleSentence}
 		page := new(entity.ParsedPage)
-		if err := tx.Where("id = ?", o.ParsedPageID).First(page).Error; err == nil {
+		if err := c.PageRepository.FindByID(tx, page, o.ParsedPageID); err == nil {
 			dto.SourceURL = page.URL
 			dto.PageTitle = page.Title
 		}

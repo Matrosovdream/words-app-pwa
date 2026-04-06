@@ -19,8 +19,8 @@ func (r *LearnCategoryRepository) FindAll(db *gorm.DB, out *[]entity.LearnCatego
 	return db.Order("sort_order ASC, name ASC").Find(out).Error
 }
 
-func (r *LearnCategoryRepository) FindByID(db *gorm.DB, out *entity.LearnCategory, id string) error {
-	return db.Where("id = ?", id).First(out).Error
+func (r *LearnCategoryRepository) FindByPublicID(db *gorm.DB, out *entity.LearnCategory, publicID string) error {
+	return db.Where("public_id = ?", publicID).First(out).Error
 }
 
 func (r *LearnCategoryRepository) Create(db *gorm.DB, c *entity.LearnCategory) error {
@@ -31,6 +31,6 @@ func (r *LearnCategoryRepository) Update(db *gorm.DB, c *entity.LearnCategory) e
 	return db.Save(c).Error
 }
 
-func (r *LearnCategoryRepository) Delete(db *gorm.DB, id string) error {
+func (r *LearnCategoryRepository) Delete(db *gorm.DB, id int64) error {
 	return db.Where("id = ?", id).Delete(&entity.LearnCategory{}).Error
 }

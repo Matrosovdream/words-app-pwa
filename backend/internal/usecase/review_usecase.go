@@ -17,15 +17,15 @@ import (
 )
 
 type ReviewUseCase struct {
-	DB                       *gorm.DB
-	Log                      *logrus.Logger
-	Validate                 *validator.Validate
-	ReviewRepository         *repository.ReviewItemRepository
-	DictWordRepository       *repository.DictWordRepository
-	OccurrenceRepository     *repository.WordOccurrenceRepository
-	ParsedPageRepository     *repository.ParsedPageRepository
-	LearnItemRepository      *repository.LearnItemRepository
-	LearnCategoryRepository  *repository.LearnCategoryRepository
+	DB                      *gorm.DB
+	Log                     *logrus.Logger
+	Validate                *validator.Validate
+	ReviewRepository        *repository.ReviewItemRepository
+	DictWordRepository      *repository.DictWordRepository
+	OccurrenceRepository    *repository.WordOccurrenceRepository
+	ParsedPageRepository    *repository.ParsedPageRepository
+	LearnItemRepository     *repository.LearnItemRepository
+	LearnCategoryRepository *repository.LearnCategoryRepository
 }
 
 func NewReviewUseCase(db *gorm.DB, log *logrus.Logger, validate *validator.Validate,
@@ -75,17 +75,24 @@ func (c *ReviewUseCase) ListPending(ctx context.Context, limit int) ([]model.Rev
 		if err := c.OccurrenceRepository.FindByWord(tx, &occs, r.WordID, 1); err == nil && len(occs) > 0 {
 			sample = occs[0].SampleSentence
 			page := new(entity.ParsedPage)
-			if err := tx.Where("id = ?", occs[0].ParsedPageID).First(page).Error; err == nil {
+			if err := c.ParsedPageRepository.FindByID(tx, page, occs[0].ParsedPageID); err == nil {
 				sourceURL = page.URL
 			}
 		}
+		var firstSeenPagePublicID *string
+		if r.FirstSeenPageID != nil {
+			page := new(entity.ParsedPage)
+			if err := c.ParsedPageRepository.FindByID(tx, page, *r.FirstSeenPageID); err == nil {
+				firstSeenPagePublicID = &page.PublicID
+			}
+		}
 		responses = append(responses, model.ReviewItemResponse{
-			ID:              r.ID,
-			WordID:          r.WordID,
+			ID:              r.PublicID,
+			WordID:          word.PublicID,
 			Lemma:           word.Lemma,
 			Language:        word.Language,
 			SampleSentence:  sample,
-			FirstSeenPageID: r.FirstSeenPageID,
+			FirstSeenPageID: firstSeenPagePublicID,
 			SourceURL:       sourceURL,
 			Status:          r.Status,
 			CreatedAt:       r.CreatedAt.Unix(),
@@ -109,7 +116,7 @@ func (c *ReviewUseCase) Add(ctx context.Context, req *model.ReviewDecisionReques
 	}
 
 	item := new(entity.ReviewItem)
-	if err := c.ReviewRepository.FindByID(tx, item, req.ID); err != nil {
+	if err := c.ReviewRepository.FindByPublicID(tx, item, req.ID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.ErrNotFound
 		}
@@ -118,18 +125,17 @@ func (c *ReviewUseCase) Add(ctx context.Context, req *model.ReviewDecisionReques
 	}
 
 	// validate optional category
-	var categoryID *string
+	var categoryID *int64
 	if req.LearnCategoryID != "" {
 		cat := new(entity.LearnCategory)
-		if err := c.LearnCategoryRepository.FindByID(tx, cat, req.LearnCategoryID); err != nil {
+		if err := c.LearnCategoryRepository.FindByPublicID(tx, cat, req.LearnCategoryID); err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fiber.ErrNotFound
 			}
 			c.Log.Warnf("Failed find learn category : %+v", err)
 			return fiber.ErrInternalServerError
 		}
-		cid := cat.ID
-		categoryID = &cid
+		categoryID = &cat.ID
 	}
 
 	// upsert learn item
@@ -137,7 +143,7 @@ func (c *ReviewUseCase) Add(ctx context.Context, req *model.ReviewDecisionReques
 	if err := c.LearnItemRepository.FindByWordID(tx, existing, item.WordID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			li := &entity.LearnItem{
-				ID:              uuid.NewString(),
+				PublicID:        uuid.NewString(),
 				WordID:          item.WordID,
 				LearnCategoryID: categoryID,
 				Status:          entity.LearnStatusActive,
@@ -181,12 +187,12 @@ func (c *ReviewUseCase) Add(ctx context.Context, req *model.ReviewDecisionReques
 	return nil
 }
 
-func (c *ReviewUseCase) Deny(ctx context.Context, id string) error {
+func (c *ReviewUseCase) Deny(ctx context.Context, publicID string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
 	item := new(entity.ReviewItem)
-	if err := c.ReviewRepository.FindByID(tx, item, id); err != nil {
+	if err := c.ReviewRepository.FindByPublicID(tx, item, publicID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.ErrNotFound
 		}

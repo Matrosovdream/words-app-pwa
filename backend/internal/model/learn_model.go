@@ -15,7 +15,7 @@ type CreateLearnCategoryRequest struct {
 }
 
 type UpdateLearnCategoryRequest struct {
-	ID        string `json:"-" validate:"required,uuid4"`
+	ID        string `json:"-" validate:"required,uuid"`
 	Name      string `json:"name" validate:"required,max=128"`
 	Color     string `json:"color" validate:"max=16"`
 	SortOrder int    `json:"sort_order" validate:"min=0,max=10000"`
@@ -35,7 +35,7 @@ type LearnItemResponse struct {
 }
 
 type UpdateLearnItemRequest struct {
-	ID              string  `json:"-" validate:"required,uuid4"`
-	LearnCategoryID *string `json:"learn_category_id" validate:"omitempty,uuid4"`
+	ID              string  `json:"-" validate:"required,uuid"`
+	LearnCategoryID *string `json:"learn_category_id" validate:"omitempty,uuid"`
 	MasteryLevel    *int    `json:"mastery_level" validate:"omitempty,min=0,max=5"`
 }

@@ -19,7 +19,11 @@ func (r *SiteRepository) FindAll(db *gorm.DB, sites *[]entity.Site) error {
 	return db.Order("created_at DESC").Find(sites).Error
 }
 
-func (r *SiteRepository) FindByID(db *gorm.DB, site *entity.Site, id string) error {
+func (r *SiteRepository) FindByPublicID(db *gorm.DB, site *entity.Site, publicID string) error {
+	return db.Where("public_id = ?", publicID).First(site).Error
+}
+
+func (r *SiteRepository) FindByID(db *gorm.DB, site *entity.Site, id int64) error {
 	return db.Where("id = ?", id).First(site).Error
 }
 
@@ -31,7 +35,7 @@ func (r *SiteRepository) Update(db *gorm.DB, site *entity.Site) error {
 	return db.Save(site).Error
 }
 
-func (r *SiteRepository) Delete(db *gorm.DB, id string) error {
+func (r *SiteRepository) Delete(db *gorm.DB, id int64) error {
 	return db.Where("id = ?", id).Delete(&entity.Site{}).Error
 }
 

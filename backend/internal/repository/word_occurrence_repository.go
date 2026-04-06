@@ -19,6 +19,6 @@ func (r *WordOccurrenceRepository) Create(db *gorm.DB, o *entity.WordOccurrence)
 	return db.Create(o).Error
 }
 
-func (r *WordOccurrenceRepository) FindByWord(db *gorm.DB, out *[]entity.WordOccurrence, wordID string, limit int) error {
+func (r *WordOccurrenceRepository) FindByWord(db *gorm.DB, out *[]entity.WordOccurrence, wordID int64, limit int) error {
 	return db.Where("word_id = ?", wordID).Order("created_at DESC").Limit(limit).Find(out).Error
 }

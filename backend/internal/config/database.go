@@ -120,7 +120,7 @@ func seedAdminUser(db *gorm.DB, v *viper.Viper, log *logrus.Logger) {
 	}
 
 	user := &entity.User{
-		ID:           uuid.NewString(),
+		PublicID:     uuid.NewString(),
 		Email:        email,
 		PasswordHash: string(hash),
 		Role:         "admin",
@@ -184,7 +184,7 @@ func seedFrequencyList(db *gorm.DB, v *viper.Viper, log *logrus.Logger) {
 		rank++
 		r := rank
 		batch = append(batch, entity.DictWord{
-			ID:            uuid.NewString(),
+			PublicID:      uuid.NewString(),
 			Lemma:         lemma,
 			Language:      "en",
 			FrequencyRank: &r,
@@ -245,7 +245,6 @@ func seedCountries(db *gorm.DB, log *logrus.Logger) {
 			continue
 		}
 		batch = append(batch, entity.Country{
-			ID:   uuid.NewString(),
 			Name: strings.TrimSpace(record[0]),
 			Code: strings.TrimSpace(record[1]),
 		})
@@ -290,7 +289,6 @@ func seedStates(db *gorm.DB, log *logrus.Logger) {
 			continue
 		}
 		batch = append(batch, entity.State{
-			ID:   uuid.NewString(),
 			Name: strings.TrimSpace(record[1]),
 			Code: strings.TrimSpace(record[0]),
 		})
@@ -348,7 +346,6 @@ func seedCities(db *gorm.DB, log *logrus.Logger) {
 		}
 		seen[key] = true
 		batch = append(batch, entity.City{
-			ID:   uuid.NewString(),
 			Name: name,
 		})
 		n++

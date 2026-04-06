@@ -186,7 +186,7 @@ func (w *Worker) processJob(ctx context.Context, job *entity.ParseJob) {
 		page.ParsedAt = now
 	} else {
 		page = &entity.ParsedPage{
-			ID:             uuid.NewString(),
+			PublicID:       uuid.NewString(),
 			SiteID:         site.ID,
 			SiteCategoryID: job.SiteCategoryID,
 			URL:            job.URL,
@@ -256,7 +256,7 @@ func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, 
 		} else {
 			// create new dict word (rare, not in frequency seed)
 			existing = &entity.DictWord{
-				ID:       uuid.NewString(),
+				PublicID:  uuid.NewString(),
 				Lemma:    lemma,
 				Language: language,
 			}
@@ -268,7 +268,7 @@ func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, 
 		// create occurrence (one per page per word)
 		sample := FindSampleSentence(sentences, lemma)
 		_ = w.OccurrenceRepository.Create(w.DB.WithContext(ctx), &entity.WordOccurrence{
-			ID:             uuid.NewString(),
+			PublicID:       uuid.NewString(),
 			WordID:         existing.ID,
 			ParsedPageID:   page.ID,
 			Count:          count,
@@ -282,7 +282,7 @@ func (w *Worker) extractRareWords(ctx context.Context, page *entity.ParsedPage, 
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				pageID := page.ID
 				_ = w.ReviewRepository.Create(w.DB.WithContext(ctx), &entity.ReviewItem{
-					ID:              uuid.NewString(),
+					PublicID:        uuid.NewString(),
 					WordID:          existing.ID,
 					FirstSeenPageID: &pageID,
 					Status:          entity.ReviewStatusPending,

@@ -4,7 +4,8 @@ import "time"
 
 // Site is a source to parse words from.
 type Site struct {
-	ID               string    `gorm:"column:id;primaryKey;type:uuid"`
+	ID               int64     `gorm:"column:id;primaryKey;autoIncrement"`
+	PublicID         string    `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
 	Name             string    `gorm:"column:name;size:255"`
 	BaseURL          string    `gorm:"column:base_url;size:512"`
 	IsActive         bool      `gorm:"column:is_active;default:true"`

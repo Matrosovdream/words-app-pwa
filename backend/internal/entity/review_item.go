@@ -10,9 +10,10 @@ const (
 
 // ReviewItem is a word awaiting user decision (add to /learn or deny forever).
 type ReviewItem struct {
-	ID              string     `gorm:"column:id;primaryKey;type:uuid"`
-	WordID          string     `gorm:"column:word_id;type:uuid;uniqueIndex"`
-	FirstSeenPageID *string    `gorm:"column:first_seen_page_id;type:uuid"`
+	ID              int64      `gorm:"column:id;primaryKey;autoIncrement"`
+	PublicID        string     `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
+	WordID          int64      `gorm:"column:word_id;uniqueIndex"`
+	FirstSeenPageID *int64     `gorm:"column:first_seen_page_id"`
 	Status          string     `gorm:"column:status;size:16;index;default:pending"`
 	ReviewedAt      *time.Time `gorm:"column:reviewed_at"`
 	CreatedAt       time.Time  `gorm:"column:created_at"`

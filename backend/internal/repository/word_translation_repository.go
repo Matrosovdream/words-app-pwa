@@ -15,7 +15,7 @@ func NewWordTranslationRepository(log *logrus.Logger) *WordTranslationRepository
 	return &WordTranslationRepository{Log: log}
 }
 
-func (r *WordTranslationRepository) FindByWordAndLang(db *gorm.DB, out *[]entity.WordTranslation, wordID, lang string) error {
+func (r *WordTranslationRepository) FindByWordAndLang(db *gorm.DB, out *[]entity.WordTranslation, wordID int64, lang string) error {
 	return db.Where("word_id = ? AND target_language = ?", wordID, lang).
 		Order("is_primary DESC, fetched_at DESC").Find(out).Error
 }
@@ -24,7 +24,7 @@ func (r *WordTranslationRepository) Create(db *gorm.DB, t *entity.WordTranslatio
 	return db.Create(t).Error
 }
 
-func (r *WordTranslationRepository) DeletePrimaryFlag(db *gorm.DB, wordID, lang string) error {
+func (r *WordTranslationRepository) DeletePrimaryFlag(db *gorm.DB, wordID int64, lang string) error {
 	return db.Model(&entity.WordTranslation{}).
 		Where("word_id = ? AND target_language = ?", wordID, lang).
 		Update("is_primary", false).Error

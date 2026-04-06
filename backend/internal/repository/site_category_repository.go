@@ -15,11 +15,15 @@ func NewSiteCategoryRepository(log *logrus.Logger) *SiteCategoryRepository {
 	return &SiteCategoryRepository{Log: log}
 }
 
-func (r *SiteCategoryRepository) FindBySite(db *gorm.DB, out *[]entity.SiteCategory, siteID string) error {
+func (r *SiteCategoryRepository) FindBySite(db *gorm.DB, out *[]entity.SiteCategory, siteID int64) error {
 	return db.Where("site_id = ?", siteID).Order("name ASC").Find(out).Error
 }
 
-func (r *SiteCategoryRepository) FindByID(db *gorm.DB, out *entity.SiteCategory, id string) error {
+func (r *SiteCategoryRepository) FindByPublicID(db *gorm.DB, out *entity.SiteCategory, publicID string) error {
+	return db.Where("public_id = ?", publicID).First(out).Error
+}
+
+func (r *SiteCategoryRepository) FindByID(db *gorm.DB, out *entity.SiteCategory, id int64) error {
 	return db.Where("id = ?", id).First(out).Error
 }
 
@@ -31,6 +35,6 @@ func (r *SiteCategoryRepository) Update(db *gorm.DB, c *entity.SiteCategory) err
 	return db.Save(c).Error
 }
 
-func (r *SiteCategoryRepository) Delete(db *gorm.DB, id string) error {
+func (r *SiteCategoryRepository) Delete(db *gorm.DB, id int64) error {
 	return db.Where("id = ?", id).Delete(&entity.SiteCategory{}).Error
 }

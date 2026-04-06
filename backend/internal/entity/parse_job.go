@@ -12,9 +12,10 @@ const (
 
 // ParseJob is a queued URL to fetch and parse.
 type ParseJob struct {
-	ID             string     `gorm:"column:id;primaryKey;type:uuid"`
-	SiteID         string     `gorm:"column:site_id;type:uuid;index"`
-	SiteCategoryID *string    `gorm:"column:site_category_id;type:uuid"`
+	ID             int64      `gorm:"column:id;primaryKey;autoIncrement"`
+	PublicID       string     `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
+	SiteID         int64      `gorm:"column:site_id;index"`
+	SiteCategoryID *int64     `gorm:"column:site_category_id"`
 	URL            string     `gorm:"column:url;size:1024"`
 	Status         string     `gorm:"column:status;size:32;index;default:pending"`
 	ScheduledAt    time.Time  `gorm:"column:scheduled_at;index"`

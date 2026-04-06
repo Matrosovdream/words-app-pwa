@@ -9,9 +9,10 @@ const (
 
 // LearnItem is a word the user accepted into their learning list.
 type LearnItem struct {
-	ID              string     `gorm:"column:id;primaryKey;type:uuid"`
-	WordID          string     `gorm:"column:word_id;type:uuid;uniqueIndex"`
-	LearnCategoryID *string    `gorm:"column:learn_category_id;type:uuid;index"`
+	ID              int64      `gorm:"column:id;primaryKey;autoIncrement"`
+	PublicID        string     `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
+	WordID          int64      `gorm:"column:word_id;uniqueIndex"`
+	LearnCategoryID *int64     `gorm:"column:learn_category_id;index"`
 	Status          string     `gorm:"column:status;size:16;index;default:active"`
 	MasteryLevel    int        `gorm:"column:mastery_level;default:0"`
 	LastReviewedAt  *time.Time `gorm:"column:last_reviewed_at"`

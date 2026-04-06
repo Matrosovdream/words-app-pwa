@@ -1,0 +1,16 @@
+DROP TABLE IF EXISTS learn_items;
+DROP TABLE IF EXISTS learn_categories;
+DROP TABLE IF EXISTS review_items;
+DROP TABLE IF EXISTS word_relations;
+DROP TABLE IF EXISTS word_translations;
+DROP TABLE IF EXISTS word_occurrences;
+DROP TABLE IF EXISTS words;
+DROP TABLE IF EXISTS parsed_pages;
+DROP TABLE IF EXISTS parse_jobs;
+DROP TABLE IF EXISTS site_categories;
+DROP TABLE IF EXISTS sites;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS app_settings;
+DROP TABLE IF EXISTS cities;
+DROP TABLE IF EXISTS states;
+DROP TABLE IF EXISTS countries;

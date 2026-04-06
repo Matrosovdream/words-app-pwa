@@ -44,7 +44,7 @@ func (r *ParseJobRepository) FindRecent(db *gorm.DB, out *[]entity.ParseJob, lim
 	return db.Order("created_at DESC").Limit(limit).Find(out).Error
 }
 
-func (r *ParseJobRepository) CountHitsToday(db *gorm.DB, siteID string) (int64, error) {
+func (r *ParseJobRepository) CountHitsToday(db *gorm.DB, siteID int64) (int64, error) {
 	since := time.Now().Add(-24 * time.Hour)
 	var n int64
 	err := db.Model(&entity.ParseJob{}).

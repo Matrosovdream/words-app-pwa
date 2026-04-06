@@ -7,7 +7,7 @@ import (
 
 func SiteToResponse(s *entity.Site) *model.SiteResponse {
 	return &model.SiteResponse{
-		ID:               s.ID,
+		ID:               s.PublicID,
 		Name:             s.Name,
 		BaseURL:          s.BaseURL,
 		IsActive:         s.IsActive,
@@ -27,10 +27,10 @@ func SitesToResponses(items []entity.Site) []model.SiteResponse {
 	return out
 }
 
-func SiteCategoryToResponse(c *entity.SiteCategory) *model.SiteCategoryResponse {
+func SiteCategoryToResponse(c *entity.SiteCategory, sitePublicID string) *model.SiteCategoryResponse {
 	return &model.SiteCategoryResponse{
-		ID:             c.ID,
-		SiteID:         c.SiteID,
+		ID:             c.PublicID,
+		SiteID:         sitePublicID,
 		Name:           c.Name,
 		StartURL:       c.StartURL,
 		URLPattern:     c.URLPattern,
@@ -41,10 +41,10 @@ func SiteCategoryToResponse(c *entity.SiteCategory) *model.SiteCategoryResponse 
 	}
 }
 
-func SiteCategoriesToResponses(items []entity.SiteCategory) []model.SiteCategoryResponse {
+func SiteCategoriesToResponses(items []entity.SiteCategory, sitePublicID string) []model.SiteCategoryResponse {
 	out := make([]model.SiteCategoryResponse, len(items))
 	for i := range items {
-		out[i] = *SiteCategoryToResponse(&items[i])
+		out[i] = *SiteCategoryToResponse(&items[i], sitePublicID)
 	}
 	return out
 }

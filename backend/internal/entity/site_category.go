@@ -4,8 +4,9 @@ import "time"
 
 // SiteCategory is a named section inside a site with its own crawl config.
 type SiteCategory struct {
-	ID             string    `gorm:"column:id;primaryKey;type:uuid"`
-	SiteID         string    `gorm:"column:site_id;type:uuid;index"`
+	ID             int64     `gorm:"column:id;primaryKey;autoIncrement"`
+	PublicID       string    `gorm:"column:public_id;type:uuid;uniqueIndex;not null"`
+	SiteID         int64     `gorm:"column:site_id;index"`
 	Name           string    `gorm:"column:name;size:255"`
 	StartURL       string    `gorm:"column:start_url;size:512"`
 	URLPattern     string    `gorm:"column:url_pattern;size:512"`

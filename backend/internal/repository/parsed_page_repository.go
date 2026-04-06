@@ -15,7 +15,7 @@ func NewParsedPageRepository(log *logrus.Logger) *ParsedPageRepository {
 	return &ParsedPageRepository{Log: log}
 }
 
-func (r *ParsedPageRepository) FindByHash(db *gorm.DB, out *entity.ParsedPage, siteID, urlHash string) error {
+func (r *ParsedPageRepository) FindByHash(db *gorm.DB, out *entity.ParsedPage, siteID int64, urlHash string) error {
 	return db.Where("site_id = ? AND url_hash = ?", siteID, urlHash).First(out).Error
 }
 
@@ -29,4 +29,8 @@ func (r *ParsedPageRepository) Update(db *gorm.DB, p *entity.ParsedPage) error {
 
 func (r *ParsedPageRepository) FindRecent(db *gorm.DB, out *[]entity.ParsedPage, limit int) error {
 	return db.Order("parsed_at DESC").Limit(limit).Find(out).Error
+}
+
+func (r *ParsedPageRepository) FindByID(db *gorm.DB, out *entity.ParsedPage, id int64) error {
+	return db.Where("id = ?", id).First(out).Error
 }

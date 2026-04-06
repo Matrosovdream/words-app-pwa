@@ -13,6 +13,6 @@ type ReviewItemResponse struct {
 }
 
 type ReviewDecisionRequest struct {
-	ID              string `json:"-" validate:"required,uuid4"`
-	LearnCategoryID string `json:"learn_category_id" validate:"omitempty,uuid4"`
+	ID              string `json:"-" validate:"required,uuid"`
+	LearnCategoryID string `json:"learn_category_id" validate:"omitempty,uuid"`
 }

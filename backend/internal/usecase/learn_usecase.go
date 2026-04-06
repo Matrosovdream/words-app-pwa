@@ -52,9 +52,9 @@ func (c *LearnUseCase) ListCategories(ctx context.Context) ([]model.LearnCategor
 	}
 
 	// aggregate counts of active items per category
-	counts := make(map[string]int64, len(cats))
+	counts := make(map[int64]int64, len(cats))
 	type row struct {
-		LearnCategoryID string
+		LearnCategoryID int64
 		N               int64
 	}
 	var rows []row
@@ -71,7 +71,7 @@ func (c *LearnUseCase) ListCategories(ctx context.Context) ([]model.LearnCategor
 	out := make([]model.LearnCategoryResponse, len(cats))
 	for i := range cats {
 		out[i] = model.LearnCategoryResponse{
-			ID:        cats[i].ID,
+			ID:        cats[i].PublicID,
 			Name:      cats[i].Name,
 			Color:     cats[i].Color,
 			SortOrder: cats[i].SortOrder,
@@ -94,7 +94,7 @@ func (c *LearnUseCase) CreateCategory(ctx context.Context, req *model.CreateLear
 		return nil, fiber.ErrBadRequest
 	}
 	cat := &entity.LearnCategory{
-		ID:        uuid.NewString(),
+		PublicID:  uuid.NewString(),
 		Name:      req.Name,
 		Color:     req.Color,
 		SortOrder: req.SortOrder,
@@ -110,7 +110,7 @@ func (c *LearnUseCase) CreateCategory(ctx context.Context, req *model.CreateLear
 		return nil, fiber.ErrInternalServerError
 	}
 	return &model.LearnCategoryResponse{
-		ID: cat.ID, Name: cat.Name, Color: cat.Color, SortOrder: cat.SortOrder,
+		ID: cat.PublicID, Name: cat.Name, Color: cat.Color, SortOrder: cat.SortOrder,
 	}, nil
 }
 
@@ -123,7 +123,7 @@ func (c *LearnUseCase) UpdateCategory(ctx context.Context, req *model.UpdateLear
 		return nil, fiber.ErrBadRequest
 	}
 	cat := new(entity.LearnCategory)
-	if err := c.LearnCategoryRepository.FindByID(tx, cat, req.ID); err != nil {
+	if err := c.LearnCategoryRepository.FindByPublicID(tx, cat, req.ID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.ErrNotFound
 		}
@@ -143,21 +143,31 @@ func (c *LearnUseCase) UpdateCategory(ctx context.Context, req *model.UpdateLear
 		return nil, fiber.ErrInternalServerError
 	}
 	return &model.LearnCategoryResponse{
-		ID: cat.ID, Name: cat.Name, Color: cat.Color, SortOrder: cat.SortOrder,
+		ID: cat.PublicID, Name: cat.Name, Color: cat.Color, SortOrder: cat.SortOrder,
 	}, nil
 }
 
-func (c *LearnUseCase) DeleteCategory(ctx context.Context, id string) error {
+func (c *LearnUseCase) DeleteCategory(ctx context.Context, publicID string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
+
+	cat := new(entity.LearnCategory)
+	if err := c.LearnCategoryRepository.FindByPublicID(tx, cat, publicID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.ErrNotFound
+		}
+		c.Log.Warnf("Failed find category : %+v", err)
+		return fiber.ErrInternalServerError
+	}
+
 	// null out items in this category
 	if err := tx.Model(&entity.LearnItem{}).
-		Where("learn_category_id = ?", id).
+		Where("learn_category_id = ?", cat.ID).
 		Update("learn_category_id", nil).Error; err != nil {
 		c.Log.Warnf("Failed to clear category refs : %+v", err)
 		return fiber.ErrInternalServerError
 	}
-	if err := c.LearnCategoryRepository.Delete(tx, id); err != nil {
+	if err := c.LearnCategoryRepository.Delete(tx, cat.ID); err != nil {
 		c.Log.Warnf("Failed to delete category : %+v", err)
 		return fiber.ErrInternalServerError
 	}
@@ -170,9 +180,22 @@ func (c *LearnUseCase) DeleteCategory(ctx context.Context, id string) error {
 
 // Items
 
-func (c *LearnUseCase) ListItems(ctx context.Context, categoryID *string, sort string) ([]model.LearnItemResponse, error) {
+func (c *LearnUseCase) ListItems(ctx context.Context, categoryPublicID *string, sort string) ([]model.LearnItemResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
+
+	var categoryID *int64
+	if categoryPublicID != nil {
+		cat := new(entity.LearnCategory)
+		if err := c.LearnCategoryRepository.FindByPublicID(tx, cat, *categoryPublicID); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fiber.ErrNotFound
+			}
+			c.Log.Warnf("Failed find category : %+v", err)
+			return nil, fiber.ErrInternalServerError
+		}
+		categoryID = &cat.ID
+	}
 
 	var items []entity.LearnItem
 	if err := c.LearnItemRepository.FindActive(tx, &items, categoryID, sort); err != nil {
@@ -214,12 +237,14 @@ func (c *LearnUseCase) ListArchived(ctx context.Context, limit int) ([]model.Lea
 }
 
 func (c *LearnUseCase) hydrateItems(tx *gorm.DB, items []entity.LearnItem) ([]model.LearnItemResponse, error) {
-	// fetch all needed categories + words in one go
-	catMap := map[string]string{}
+	// fetch all needed categories
+	catNames := map[int64]string{}
+	catPublicIDs := map[int64]string{}
 	var cats []entity.LearnCategory
 	if err := tx.Find(&cats).Error; err == nil {
-		for _, c := range cats {
-			catMap[c.ID] = c.Name
+		for _, cat := range cats {
+			catNames[cat.ID] = cat.Name
+			catPublicIDs[cat.ID] = cat.PublicID
 		}
 	}
 
@@ -231,17 +256,18 @@ func (c *LearnUseCase) hydrateItems(tx *gorm.DB, items []entity.LearnItem) ([]mo
 			continue
 		}
 		resp := model.LearnItemResponse{
-			ID:              it.ID,
-			WordID:          it.WordID,
-			Lemma:           w.Lemma,
-			Language:        w.Language,
-			LearnCategoryID: it.LearnCategoryID,
-			Status:          it.Status,
-			MasteryLevel:    it.MasteryLevel,
-			CreatedAt:       it.CreatedAt.Unix(),
+			ID:           it.PublicID,
+			WordID:       w.PublicID,
+			Lemma:        w.Lemma,
+			Language:     w.Language,
+			Status:       it.Status,
+			MasteryLevel: it.MasteryLevel,
+			CreatedAt:    it.CreatedAt.Unix(),
 		}
 		if it.LearnCategoryID != nil {
-			resp.CategoryName = catMap[*it.LearnCategoryID]
+			pid := catPublicIDs[*it.LearnCategoryID]
+			resp.LearnCategoryID = &pid
+			resp.CategoryName = catNames[*it.LearnCategoryID]
 		}
 		if it.ArchivedAt != nil {
 			t := it.ArchivedAt.Unix()
@@ -260,7 +286,7 @@ func (c *LearnUseCase) UpdateItem(ctx context.Context, req *model.UpdateLearnIte
 		return fiber.ErrBadRequest
 	}
 	item := new(entity.LearnItem)
-	if err := c.LearnItemRepository.FindByID(tx, item, req.ID); err != nil {
+	if err := c.LearnItemRepository.FindByPublicID(tx, item, req.ID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.ErrNotFound
 		}
@@ -271,8 +297,15 @@ func (c *LearnUseCase) UpdateItem(ctx context.Context, req *model.UpdateLearnIte
 		if *req.LearnCategoryID == "" {
 			item.LearnCategoryID = nil
 		} else {
-			cid := *req.LearnCategoryID
-			item.LearnCategoryID = &cid
+			cat := new(entity.LearnCategory)
+			if err := c.LearnCategoryRepository.FindByPublicID(tx, cat, *req.LearnCategoryID); err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return fiber.ErrNotFound
+				}
+				c.Log.Warnf("Failed find category : %+v", err)
+				return fiber.ErrInternalServerError
+			}
+			item.LearnCategoryID = &cat.ID
 		}
 	}
 	if req.MasteryLevel != nil {
@@ -291,11 +324,11 @@ func (c *LearnUseCase) UpdateItem(ctx context.Context, req *model.UpdateLearnIte
 }
 
 // Done archives the item (point #6: Done -> archive, never shown again).
-func (c *LearnUseCase) Done(ctx context.Context, id string) error {
+func (c *LearnUseCase) Done(ctx context.Context, publicID string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 	item := new(entity.LearnItem)
-	if err := c.LearnItemRepository.FindByID(tx, item, id); err != nil {
+	if err := c.LearnItemRepository.FindByPublicID(tx, item, publicID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.ErrNotFound
 		}

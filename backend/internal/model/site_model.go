@@ -24,7 +24,7 @@ type CreateSiteRequest struct {
 }
 
 type UpdateSiteRequest struct {
-	ID               string `json:"-" validate:"required,uuid4"`
+	ID               string `json:"-" validate:"required,uuid"`
 	Name             string `json:"name" validate:"required,max=255"`
 	BaseURL          string `json:"base_url" validate:"required,url,max=512"`
 	IsActive         *bool  `json:"is_active"`
@@ -48,7 +48,7 @@ type SiteCategoryResponse struct {
 }
 
 type CreateSiteCategoryRequest struct {
-	SiteID         string `json:"-" validate:"required,uuid4"`
+	SiteID         string `json:"-" validate:"required,uuid"`
 	Name           string `json:"name" validate:"required,max=255"`
 	StartURL       string `json:"start_url" validate:"required,url,max=512"`
 	URLPattern     string `json:"url_pattern" validate:"max=512"`
@@ -59,7 +59,7 @@ type CreateSiteCategoryRequest struct {
 }
 
 type UpdateSiteCategoryRequest struct {
-	ID             string `json:"-" validate:"required,uuid4"`
+	ID             string `json:"-" validate:"required,uuid"`
 	Name           string `json:"name" validate:"required,max=255"`
 	StartURL       string `json:"start_url" validate:"required,url,max=512"`
 	URLPattern     string `json:"url_pattern" validate:"max=512"`
@@ -70,7 +70,7 @@ type UpdateSiteCategoryRequest struct {
 }
 
 type EnqueueURLRequest struct {
-	SiteID         string `json:"-" validate:"required,uuid4"`
+	SiteID         string `json:"-" validate:"required,uuid"`
 	URL            string `json:"url" validate:"required,url,max=1024"`
-	SiteCategoryID string `json:"site_category_id" validate:"omitempty,uuid4"`
+	SiteCategoryID string `json:"site_category_id" validate:"omitempty,uuid"`
 }

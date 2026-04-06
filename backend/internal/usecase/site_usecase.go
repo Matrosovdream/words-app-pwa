@@ -73,7 +73,7 @@ func (c *SiteUseCase) Create(ctx context.Context, req *model.CreateSiteRequest) 
 	}
 
 	site := &entity.Site{
-		ID:               uuid.NewString(),
+		PublicID:         uuid.NewString(),
 		Name:             req.Name,
 		BaseURL:          req.BaseURL,
 		IsActive:         boolOrDefault(req.IsActive, true),
@@ -113,7 +113,7 @@ func (c *SiteUseCase) Update(ctx context.Context, req *model.UpdateSiteRequest) 
 	}
 
 	site := new(entity.Site)
-	if err := c.SiteRepository.FindByID(tx, site, req.ID); err != nil {
+	if err := c.SiteRepository.FindByPublicID(tx, site, req.ID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.ErrNotFound
 		}
@@ -141,11 +141,20 @@ func (c *SiteUseCase) Update(ctx context.Context, req *model.UpdateSiteRequest) 
 	return converter.SiteToResponse(site), nil
 }
 
-func (c *SiteUseCase) Delete(ctx context.Context, id string) error {
+func (c *SiteUseCase) Delete(ctx context.Context, publicID string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	if err := c.SiteRepository.Delete(tx, id); err != nil {
+	site := new(entity.Site)
+	if err := c.SiteRepository.FindByPublicID(tx, site, publicID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.ErrNotFound
+		}
+		c.Log.Warnf("Failed to find site : %+v", err)
+		return fiber.ErrInternalServerError
+	}
+
+	if err := c.SiteRepository.Delete(tx, site.ID); err != nil {
 		c.Log.Warnf("Failed to delete site : %+v", err)
 		return fiber.ErrInternalServerError
 	}
@@ -158,12 +167,21 @@ func (c *SiteUseCase) Delete(ctx context.Context, id string) error {
 
 // Categories
 
-func (c *SiteUseCase) ListCategories(ctx context.Context, siteID string) ([]model.SiteCategoryResponse, error) {
+func (c *SiteUseCase) ListCategories(ctx context.Context, sitePublicID string) ([]model.SiteCategoryResponse, error) {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
+	site := new(entity.Site)
+	if err := c.SiteRepository.FindByPublicID(tx, site, sitePublicID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fiber.ErrNotFound
+		}
+		c.Log.Warnf("Failed to find site : %+v", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
 	var cats []entity.SiteCategory
-	if err := c.SiteCategoryRepository.FindBySite(tx, &cats, siteID); err != nil {
+	if err := c.SiteCategoryRepository.FindBySite(tx, &cats, site.ID); err != nil {
 		c.Log.Warnf("Failed list categories : %+v", err)
 		return nil, fiber.ErrInternalServerError
 	}
@@ -171,7 +189,7 @@ func (c *SiteUseCase) ListCategories(ctx context.Context, siteID string) ([]mode
 		c.Log.Warnf("Failed commit transaction : %+v", err)
 		return nil, fiber.ErrInternalServerError
 	}
-	return converter.SiteCategoriesToResponses(cats), nil
+	return converter.SiteCategoriesToResponses(cats, site.PublicID), nil
 }
 
 func (c *SiteUseCase) CreateCategory(ctx context.Context, req *model.CreateSiteCategoryRequest) (*model.SiteCategoryResponse, error) {
@@ -185,7 +203,7 @@ func (c *SiteUseCase) CreateCategory(ctx context.Context, req *model.CreateSiteC
 
 	// verify site exists
 	site := new(entity.Site)
-	if err := c.SiteRepository.FindByID(tx, site, req.SiteID); err != nil {
+	if err := c.SiteRepository.FindByPublicID(tx, site, req.SiteID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.ErrNotFound
 		}
@@ -199,8 +217,8 @@ func (c *SiteUseCase) CreateCategory(ctx context.Context, req *model.CreateSiteC
 	}
 
 	cat := &entity.SiteCategory{
-		ID:             uuid.NewString(),
-		SiteID:         req.SiteID,
+		PublicID:       uuid.NewString(),
+		SiteID:         site.ID,
 		Name:           req.Name,
 		StartURL:       req.StartURL,
 		URLPattern:     req.URLPattern,
@@ -219,7 +237,7 @@ func (c *SiteUseCase) CreateCategory(ctx context.Context, req *model.CreateSiteC
 	// auto-enqueue the start URL so parsing begins immediately
 	catID := cat.ID
 	job := &entity.ParseJob{
-		ID:             uuid.NewString(),
+		PublicID:       uuid.NewString(),
 		SiteID:         site.ID,
 		SiteCategoryID: &catID,
 		URL:            cat.StartURL,
@@ -237,16 +255,16 @@ func (c *SiteUseCase) CreateCategory(ctx context.Context, req *model.CreateSiteC
 		c.Log.Warnf("Failed commit transaction : %+v", err)
 		return nil, fiber.ErrInternalServerError
 	}
-	return converter.SiteCategoryToResponse(cat), nil
+	return converter.SiteCategoryToResponse(cat, site.PublicID), nil
 }
 
 // CrawlCategory re-enqueues the category's start URL for parsing.
-func (c *SiteUseCase) CrawlCategory(ctx context.Context, categoryID string) error {
+func (c *SiteUseCase) CrawlCategory(ctx context.Context, categoryPublicID string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
 	cat := new(entity.SiteCategory)
-	if err := c.SiteCategoryRepository.FindByID(tx, cat, categoryID); err != nil {
+	if err := c.SiteCategoryRepository.FindByPublicID(tx, cat, categoryPublicID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.ErrNotFound
 		}
@@ -256,7 +274,7 @@ func (c *SiteUseCase) CrawlCategory(ctx context.Context, categoryID string) erro
 
 	catID := cat.ID
 	job := &entity.ParseJob{
-		ID:             uuid.NewString(),
+		PublicID:       uuid.NewString(),
 		SiteID:         cat.SiteID,
 		SiteCategoryID: &catID,
 		URL:            cat.StartURL,
@@ -286,13 +304,21 @@ func (c *SiteUseCase) UpdateCategory(ctx context.Context, req *model.UpdateSiteC
 	}
 
 	cat := new(entity.SiteCategory)
-	if err := c.SiteCategoryRepository.FindByID(tx, cat, req.ID); err != nil {
+	if err := c.SiteCategoryRepository.FindByPublicID(tx, cat, req.ID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fiber.ErrNotFound
 		}
 		c.Log.Warnf("Failed to find category : %+v", err)
 		return nil, fiber.ErrInternalServerError
 	}
+
+	// resolve site PublicID for the response
+	site := new(entity.Site)
+	if err := c.SiteRepository.FindByID(tx, site, cat.SiteID); err != nil {
+		c.Log.Warnf("Failed to find site for category : %+v", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
 	cat.Name = req.Name
 	cat.StartURL = req.StartURL
 	cat.URLPattern = req.URLPattern
@@ -312,13 +338,23 @@ func (c *SiteUseCase) UpdateCategory(ctx context.Context, req *model.UpdateSiteC
 		c.Log.Warnf("Failed commit transaction : %+v", err)
 		return nil, fiber.ErrInternalServerError
 	}
-	return converter.SiteCategoryToResponse(cat), nil
+	return converter.SiteCategoryToResponse(cat, site.PublicID), nil
 }
 
-func (c *SiteUseCase) DeleteCategory(ctx context.Context, id string) error {
+func (c *SiteUseCase) DeleteCategory(ctx context.Context, publicID string) error {
 	tx := c.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
-	if err := c.SiteCategoryRepository.Delete(tx, id); err != nil {
+
+	cat := new(entity.SiteCategory)
+	if err := c.SiteCategoryRepository.FindByPublicID(tx, cat, publicID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fiber.ErrNotFound
+		}
+		c.Log.Warnf("Failed to find category : %+v", err)
+		return fiber.ErrInternalServerError
+	}
+
+	if err := c.SiteCategoryRepository.Delete(tx, cat.ID); err != nil {
 		c.Log.Warnf("Failed to delete category : %+v", err)
 		return fiber.ErrInternalServerError
 	}
@@ -339,7 +375,7 @@ func (c *SiteUseCase) EnqueueURL(ctx context.Context, req *model.EnqueueURLReque
 		return fiber.ErrBadRequest
 	}
 	site := new(entity.Site)
-	if err := c.SiteRepository.FindByID(tx, site, req.SiteID); err != nil {
+	if err := c.SiteRepository.FindByPublicID(tx, site, req.SiteID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fiber.ErrNotFound
 		}
@@ -348,7 +384,7 @@ func (c *SiteUseCase) EnqueueURL(ctx context.Context, req *model.EnqueueURLReque
 	}
 
 	job := &entity.ParseJob{
-		ID:          uuid.NewString(),
+		PublicID:    uuid.NewString(),
 		SiteID:      site.ID,
 		URL:         req.URL,
 		Status:      entity.ParseJobStatusPending,
@@ -357,8 +393,11 @@ func (c *SiteUseCase) EnqueueURL(ctx context.Context, req *model.EnqueueURLReque
 		UpdatedAt:   time.Now(),
 	}
 	if req.SiteCategoryID != "" {
-		cid := req.SiteCategoryID
-		job.SiteCategoryID = &cid
+		cat := new(entity.SiteCategory)
+		if err := c.SiteCategoryRepository.FindByPublicID(tx, cat, req.SiteCategoryID); err == nil {
+			catID := cat.ID
+			job.SiteCategoryID = &catID
+		}
 	}
 	if err := c.ParseJobRepository.Create(tx, job); err != nil {
 		c.Log.Warnf("Failed to enqueue job : %+v", err)

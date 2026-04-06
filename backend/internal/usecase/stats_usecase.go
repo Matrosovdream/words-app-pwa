@@ -64,10 +64,10 @@ func (c *StatsUseCase) ParserStats(ctx context.Context) (*model.ParserStatsRespo
 	var recent []entity.ParseJob
 	_ = c.JobRepository.FindRecent(db, &recent, 10)
 
-	// index site names
+	// index site names by internal ID
 	var sites []entity.Site
 	_ = c.SiteRepository.FindAll(db, &sites)
-	siteNames := make(map[string]string, len(sites))
+	siteNames := make(map[int64]string, len(sites))
 	for _, s := range sites {
 		siteNames[s.ID] = s.Name
 	}
@@ -75,7 +75,7 @@ func (c *StatsUseCase) ParserStats(ctx context.Context) (*model.ParserStatsRespo
 	recentDTOs := make([]model.RecentJobDTO, 0, len(recent))
 	for _, j := range recent {
 		dto := model.RecentJobDTO{
-			ID:          j.ID,
+			ID:          j.PublicID,
 			SiteName:    siteNames[j.SiteID],
 			URL:         j.URL,
 			Status:      j.Status,
@@ -98,7 +98,7 @@ func (c *StatsUseCase) ParserStats(ctx context.Context) (*model.ParserStatsRespo
 	for _, s := range sites {
 		n, _ := c.JobRepository.CountHitsToday(db, s.ID)
 		siteHits = append(siteHits, model.SiteHitDTO{
-			ID:            s.ID,
+			ID:            s.PublicID,
 			Name:          s.Name,
 			IsActive:      s.IsActive,
 			HitsToday:     n,
